@@ -33,29 +33,34 @@ public class StudyController : MonoBehaviour
         _state = STUDY_STATE.BRIEF;
         Debug.Log("Beginning new trial.");
         Debug.Log("Briefing participant.");
+        _ui.ChangePanel(_state);
     }
 
     public void CompleteBrief()
     {
         Debug.Log("Participant briefed.");
+        StartMemorization();
     }
 
     private void StartMemorization()
     {
         Debug.Log("Starting memorization.");
         _state = STUDY_STATE.MEMORIZATION;
+        _ui.ChangePanel(_state);
     }
 
     private void StartWaiting(float waitInSeconds)
     {
         Debug.Log("Waiting for " + waitInSeconds.ToString() + "seconds.");
         _state = STUDY_STATE.WAITING;
+        _ui.ChangePanel(_state);
     }
 
     private void StartKeypad()
     {
-        _state = STUDY_STATE.KEYPAD_INPUT;
         Debug.Log("Starting keypad.");
+        _state = STUDY_STATE.KEYPAD_INPUT;
+        _ui.ChangePanel(_state);
     }
     
     public void LogInput(int integer)

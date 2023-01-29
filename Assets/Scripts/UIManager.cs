@@ -20,6 +20,9 @@ public class UIManager : MonoBehaviour
     public RectTransform studyBrief;
     public RectTransform studyDebrief;
 
+    public RectTransform memorization;
+    public RectTransform waiting;
+
     public RectTransform keypadPanel;
     public TMP_Text digitProgress;
     public KeypadPanel[] keypads;
@@ -41,5 +44,48 @@ public class UIManager : MonoBehaviour
             output += i>0 ? '*' : " *";
         
         digitProgress.text = output;
+    }
+
+    public void ChangePanel(STUDY_STATE newPanel)
+    {
+        CloseAllPanels();
+        switch (newPanel)
+        { 
+            case STUDY_STATE.MAIN_MENU:
+                launchPage.gameObject.SetActive(true);
+                break;
+            case STUDY_STATE.BRIEF:
+                studyBrief.gameObject.SetActive(true);
+            break;
+            case STUDY_STATE.MEMORIZATION:
+                memorization.gameObject.SetActive(true);
+                break;
+            case STUDY_STATE.WAITING:
+                waiting.gameObject.SetActive(true);
+                break;
+            case STUDY_STATE.KEYPAD_INPUT:
+                keypadPanel.gameObject.SetActive(true);
+                break;
+            case STUDY_STATE.FOLLOW_UP:
+                break;
+            case STUDY_STATE.DEBRIEF:
+                studyDebrief.gameObject.SetActive(true);
+                break;
+            default:
+                break;
+        }
+    }
+
+    public void CloseAllPanels()
+    { 
+        launchPage.gameObject.SetActive(false);
+        studyBrief.gameObject.SetActive(false);
+        memorization.gameObject.SetActive(false);
+        waiting.gameObject.SetActive(false);
+        keypadPanel.gameObject.SetActive(false);
+        studyDebrief.gameObject.SetActive(false);
+        
+        foreach (var k in keypads)
+            k.panel.gameObject.SetActive(false);
     }
 }
