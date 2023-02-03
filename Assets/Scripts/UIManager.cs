@@ -32,9 +32,11 @@ public class UIManager : MonoBehaviour
 
     private void Awake()
     {
+        
+        
         // Init. private dictionary
-        foreach (var k in keypads)
-            _keypads.Add(k.id, k.panel);
+        //foreach (var k in keypads)
+        //    _keypads.Add(k.id, k.panel);
     }
 
     public void LogDigitProgress(int progress)
