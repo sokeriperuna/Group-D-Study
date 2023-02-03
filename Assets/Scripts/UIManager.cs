@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using UnityEngine.UIElements;
 using UnityEngine.Windows.Speech;
 using TMPro;
+using Slider = UnityEngine.UIElements.Slider;
 
 [System.Serializable]
 public struct KeypadPanel
@@ -22,6 +23,8 @@ public class UIManager : MonoBehaviour
 
     public RectTransform memorization;
     public RectTransform waiting;
+    
+    public Slider waitingProgress;
 
     public RectTransform keypadPanel;
     public TMP_Text digitProgress;
@@ -31,12 +34,11 @@ public class UIManager : MonoBehaviour
     private string _activeKeypad; 
 
     private void Awake()
-    {
-        
-        
+    { 
         // Init. private dictionary
-        //foreach (var k in keypads)
-        //    _keypads.Add(k.id, k.panel);
+        _keypads = new Dictionary<string, RectTransform>();
+        foreach (var k in keypads)
+            _keypads.Add(k.id, k.panel);
     }
 
     public void LogDigitProgress(int progress)
@@ -48,7 +50,7 @@ public class UIManager : MonoBehaviour
         digitProgress.text = output;
     }
 
-    public void ChangePanel(STUDY_STATE newPanel)
+    public void ChangePanel(STUDY_STATE newPanel, string keypadID = "")
     {
         CloseAllPanels();
         switch (newPanel)
@@ -67,6 +69,7 @@ public class UIManager : MonoBehaviour
                 break;
             case STUDY_STATE.KEYPAD_INPUT:
                 keypadPanel.gameObject.SetActive(true);
+                _keypads[keypadID].gameObject.SetActive(true);
                 break;
             case STUDY_STATE.FOLLOW_UP:
                 break;
@@ -76,6 +79,11 @@ public class UIManager : MonoBehaviour
             default:
                 break;
         }
+    }
+
+    public void UpdateWaitingSlider(float progress)
+    {
+        waitingProgress.value = progress;
     }
 
     public void CloseAllPanels()

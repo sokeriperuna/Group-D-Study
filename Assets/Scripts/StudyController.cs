@@ -44,6 +44,8 @@ public class StudyController : MonoBehaviour
     
 
     public KeypadTrial[] keypadTrials;
+
+    private string logged;
     
 
     private void Awake()
@@ -51,6 +53,8 @@ public class StudyController : MonoBehaviour
         _state = STUDY_STATE.MAIN_MENU;
         _ui = GetComponent<UIManager>();
         _audio = GetComponent<AudioManager>();
+        _ui.CloseAllPanels();
+        _ui.ChangePanel(STUDY_STATE.MAIN_MENU);
     }
     private void InitializeTrial()
     {
@@ -100,44 +104,79 @@ public class StudyController : MonoBehaviour
         Debug.Log("Starting memorization.");
         _state = STUDY_STATE.MEMORIZATION;
         _ui.ChangePanel(_state);
-        StartCoroutine(PlayMemorizationAudio(shuffledCodes[_currentTrial], 0.5f, 2));
+        StartCoroutine(PlayMemorizationAudio(shuffledCodes[_currentTrial], 0.5f, 1.5f, 2));
     }
 
-    private void StartWaiting(float waitInSeconds)
+    private void StartWaiting(float waitInSeconds, STUDY_STATE nextState)
     {
         Debug.Log("Waiting for " + waitInSeconds.ToString() + " seconds.");
         _state = STUDY_STATE.WAITING;
         _ui.ChangePanel(_state);
+        StartCoroutine(IdleWaiting(waitInSeconds, nextState));
     }
 
     private void StartKeypad()
     {
         Debug.Log("Starting keypad.");
         _state = STUDY_STATE.KEYPAD_INPUT;
-        _ui.ChangePanel(_state);
+        _ui.ChangePanel(_state, shuffledKeypads[_currentTrial]);
     }
     
     public void LogInput(int integer)
     {
+        _ui.LogDigitProgress();
         Debug.Log(integer.ToString() + " logged as input.");
     }
 
-    IEnumerator PlayMemorizationAudio(String digits, float delayInBetween=0.5f, int repeats = 2)
+    IEnumerator PlayMemorizationAudio(String digits, float delayInBetweenDigits=0.5f, float delayInBetweenRepeats=1.5f, int repeats = 2)
     {
         for (int iteration = 0; iteration < repeats; iteration++)
+        {
             for (int i = 0; i < digits.Length; i++)
-                yield return new WaitForSeconds(_audio.PlayDigit((char)digits[i])+delayInBetween);
+                yield return new WaitForSeconds(_audio.PlayDigit((char)digits[i])+delayInBetweenDigits);
+            yield return new WaitForSeconds(delayInBetweenRepeats);
+        }
         
         Debug.Log("Memorization is complete. Proceeding.");
-        StartWaiting(5f);
+        StartWaiting(5f, STUDY_STATE.KEYPAD_INPUT);
     }
 
-    IEnumerator IdleWaiting(float waitTimeInSeconds)
+    IEnumerator IdleWaiting(float waitTimeInSeconds, STUDY_STATE nextState)
     {
-        yield return waitTimeInSeconds;
-        StartKeypad();
+        float waitEnd = Time.time + waitTimeInSeconds;
+        while (waitEnd < Time.time)
+        {
+            _ui.UpdateWaitingSlider((waitEnd-Time.time)/waitTimeInSeconds);
+            yield return new WaitForEndOfFrame();
+        }
+        
+        EnterState(nextState);
     }
 
+    private void EnterState(STUDY_STATE newState)
+    {
+        switch (newState)
+        {
+            case STUDY_STATE.MAIN_MENU:
+                break;
+            case STUDY_STATE.BRIEF:
+                break;
+            case STUDY_STATE.MEMORIZATION:
+                StartMemorization();
+                break;
+            case STUDY_STATE.WAITING:
+                break;
+            case STUDY_STATE.KEYPAD_INPUT:
+                StartKeypad();
+                break;
+            case STUDY_STATE.FOLLOW_UP:
+                break;
+            case STUDY_STATE.DEBRIEF:
+                break;
+            default:
+                break;
+        }
+    }
     public void QuitSoftware()
     {
         Application.Quit();
