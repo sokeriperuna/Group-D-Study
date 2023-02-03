@@ -43,12 +43,15 @@ public class UIManager : MonoBehaviour
 
     public void LogDigitProgress(int progress)
     {
+        Debug.Log("prog: " + progress.ToString());
         string output = "";
         for (int i = 0; i < progress; i++)
-            output += i>0 ? '*' : " *";
+            output += (i<=0 ? '*' : " *");
         
         digitProgress.text = output;
     }
+
+    public void ClearDigitText() { digitProgress.text = ""; }
 
     public void ChangePanel(STUDY_STATE newPanel, string keypadID = "")
     {

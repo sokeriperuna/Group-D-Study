@@ -16,7 +16,6 @@ public class AudioManager : MonoBehaviour
 
     private void Awake()
     {
-        Debug.Log( (char)13);
         _audioSource = GetComponent<AudioSource>();
     }
     

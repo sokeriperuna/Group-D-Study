@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEditor;
 using System.IO;
 using System.Linq;
+using Unity.VisualScripting;
 
 
 public enum STUDY_STATE
@@ -36,8 +37,8 @@ public class StudyController : MonoBehaviour
 
     private STUDY_STATE _state;
 
-    private List<String> shuffledCodes;
-    private List<String> shuffledKeypads;
+    private List<String> _shuffledCodes;
+    private List<String> _shuffledKeypads;
 
     private int _currentTrial;
     private int _maxTrials;
@@ -45,8 +46,9 @@ public class StudyController : MonoBehaviour
 
     public KeypadTrial[] keypadTrials;
 
-    private string logged;
-    
+    private string _logged;
+    private float _reactionTimeStart;
+    private int _accurateCharacters;
 
     private void Awake()
     {
@@ -60,20 +62,19 @@ public class StudyController : MonoBehaviour
     {
         // Read random codes and shuffle them
         string[] unshuffledCodes = File.ReadAllText(RANDOM_CODES_PATH).Split(',');
-        shuffledCodes = unshuffledCodes.OrderBy(a => Guid.NewGuid()).ToList(); // Shuffle codes by generating new Global Unique Identifiers (GUIDs)
+        _shuffledCodes = unshuffledCodes.OrderBy(a => Guid.NewGuid()).ToList(); // Shuffle codes by generating new Global Unique Identifiers (GUIDs)
         
         _currentTrial = 0;
         _maxTrials = 0;
-        shuffledKeypads = new List<string>();
+        _shuffledKeypads = new List<string>();
         foreach (KeypadTrial trial in keypadTrials)
         {
             _maxTrials += trial.trialCount;
             for(int i=0; i<trial.trialCount; i++)
-                shuffledKeypads.Add(trial.id);   
+                _shuffledKeypads.Add(trial.id);   
         }
 
-        shuffledKeypads = shuffledKeypads.OrderBy(a => Guid.NewGuid()).ToList();
-
+        _shuffledKeypads = _shuffledKeypads.OrderBy(a => Guid.NewGuid()).ToList();
 
         /*foreach (var k in shuffledKeypads)
             Debug.Log(k);
@@ -101,10 +102,16 @@ public class StudyController : MonoBehaviour
 
     private void StartMemorization()
     {
+        if (_state == STUDY_STATE.MEMORIZATION)
+        {
+            Debug.LogError("Tried to start memorization while already in memorization.");
+            return;
+        }
+        
         Debug.Log("Starting memorization.");
         _state = STUDY_STATE.MEMORIZATION;
         _ui.ChangePanel(_state);
-        StartCoroutine(PlayMemorizationAudio(shuffledCodes[_currentTrial], 0.5f, 1.5f, 2));
+        StartCoroutine(PlayMemorizationAudio(_shuffledCodes[_currentTrial], 0.5f, 1.5f, 2));
     }
 
     private void StartWaiting(float waitInSeconds, STUDY_STATE nextState)
@@ -117,15 +124,43 @@ public class StudyController : MonoBehaviour
 
     private void StartKeypad()
     {
-        Debug.Log("Starting keypad.");
+        _logged = "";
+        Debug.Log("Starting " + _shuffledKeypads[_currentTrial] + " keypad.");
         _state = STUDY_STATE.KEYPAD_INPUT;
-        _ui.ChangePanel(_state, shuffledKeypads[_currentTrial]);
+        _ui.ChangePanel(_state, _shuffledKeypads[_currentTrial]);
+        _ui.ClearDigitText();
+
+        _reactionTimeStart = Time.time;
     }
     
     public void LogInput(int integer)
     {
-        _ui.LogDigitProgress();
-        Debug.Log(integer.ToString() + " logged as input.");
+        Debug.Log("Current trial -> " + _shuffledCodes[_currentTrial].Length.ToString());
+        if (_logged.Length < _shuffledCodes[_currentTrial].Length)
+        {
+            _logged += integer.ToString();
+            _ui.LogDigitProgress(_logged.Length);
+            Debug.Log(integer.ToString() + " logged as input.");   
+        }
+        
+        // Finish trial
+        if (_logged.Length >= _shuffledCodes[_currentTrial].Length)
+        {
+            float RT = Time.time - _reactionTimeStart;
+            _accurateCharacters = 0;
+            for(int i = 0; i<_logged.Length; i++)
+                if (_logged[i]==_shuffledCodes[_currentTrial][i])
+                    ++_accurateCharacters;
+            
+            Debug.Log(_shuffledCodes[_currentTrial] + " -> " + _logged);
+            Debug.Log(_shuffledKeypads[_currentTrial] + " -> RT: " + RT.ToString() + " | Accuracy: " + _accurateCharacters.ToString() + "/" + _logged.Length);
+            
+            ++_currentTrial;
+            if (_currentTrial < _shuffledKeypads.Count)
+                Invoke("StartMemorization", 0.5f);
+            else
+                EnterState(STUDY_STATE.DEBRIEF);
+        }
     }
 
     IEnumerator PlayMemorizationAudio(String digits, float delayInBetweenDigits=0.5f, float delayInBetweenRepeats=1.5f, int repeats = 2)
@@ -153,6 +188,11 @@ public class StudyController : MonoBehaviour
         EnterState(nextState);
     }
 
+    private void SaveData()
+    {
+        
+    }
+
     private void EnterState(STUDY_STATE newState)
     {
         switch (newState)
@@ -172,10 +212,16 @@ public class StudyController : MonoBehaviour
             case STUDY_STATE.FOLLOW_UP:
                 break;
             case STUDY_STATE.DEBRIEF:
+                _ui.ChangePanel(STUDY_STATE.DEBRIEF);
                 break;
             default:
                 break;
         }
+    }
+
+    public void ReturnToMainMenu()
+    {
+        _ui.ChangePanel(STUDY_STATE.MAIN_MENU);
     }
     public void QuitSoftware()
     {
