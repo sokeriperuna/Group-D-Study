@@ -15,6 +15,7 @@ public enum STUDY_STATE
     MEMORIZATION,
     WAITING,
     KEYPAD_INPUT,
+    INTERMISSION,
     FOLLOW_UP,
     DEBRIEF
 }
@@ -31,9 +32,10 @@ public struct KeypadTrial
 public class StudyController : MonoBehaviour
 {
     private const string RANDOM_CODES_PATH = "Assets/Resources/randomCodes.csv";
-    private const string CSV_OUTPUT_PATH = "Assets/CSV Output";
+    private const string CSV_OUTPUT_PATH = "Assets/CSVOutput";
 
-    private const char DELIMITER = ',';
+    private const char
+        DELIMITER = ';'; // NOTE: Excel's default CSV delimiter is a semicolon (ie. ";"). The delimiter can easily be changed later
 
     private readonly string[] columnNames = { "ID", "Keypad", "RT", "Accuracy" };
 
@@ -59,19 +61,31 @@ public class StudyController : MonoBehaviour
 
     private void Awake()
     {
-        
+
         _state = STUDY_STATE.MAIN_MENU;
         _ui = GetComponent<UIManager>();
         _audio = GetComponent<AudioManager>();
         _ui.CloseAllPanels();
         _ui.ChangePanel(STUDY_STATE.MAIN_MENU);
     }
+
+    // bad hacked together emergency measure. deadlines are approaching
+    private readonly string[] unshuffledCodes = { "1593","9235","9753","8459","9274","2185","8040","1401","7485","8356","7281","9750","1264","4306","9138","7915","4963","7203","6254","1893","8427","1689" };
     private void InitializeTrial()
     {
         _trialStart = DateTime.Now.ToString();
         
         // Read random codes and shuffle them
-        string[] unshuffledCodes = File.ReadAllText(RANDOM_CODES_PATH).Split(',');
+        //string[] unshuffledCodes = File.ReadAllText(RANDOM_CODES_PATH).Split(',');
+        
+        // stuff is breaking...
+        //#if UNITY_STANDALONE
+        //unshuffledCodes = Resources.Load<TextAsset>(RANDOM_CODES_PATH).text.Split(',');
+        //#endif
+        
+        
+
+
         _shuffledCodes = unshuffledCodes.OrderBy(a => Guid.NewGuid()).ToList(); // Shuffle codes by generating new Global Unique Identifiers (GUIDs)
         
         _currentTrial = 0;
@@ -169,7 +183,7 @@ public class StudyController : MonoBehaviour
 
             ++_currentTrial;
             if (_currentTrial < _shuffledKeypads.Count)
-                Invoke("StartMemorization", 0.5f);
+                EnterState(STUDY_STATE.INTERMISSION);
             else
             {
                 SaveData();
@@ -194,7 +208,7 @@ public class StudyController : MonoBehaviour
     IEnumerator IdleWaiting(float waitTimeInSeconds, STUDY_STATE nextState)
     {
         float waitEnd = Time.time + waitTimeInSeconds;
-        while (waitEnd < Time.time)
+        while (Time.time < waitEnd)
         {
             _ui.UpdateWaitingSlider((waitEnd-Time.time)/waitTimeInSeconds);
             yield return new WaitForEndOfFrame();
@@ -212,10 +226,16 @@ public class StudyController : MonoBehaviour
     private void SaveData()
     {
         DirectoryInfo destination = new DirectoryInfo(CSV_OUTPUT_PATH);
+
+        #if  UNITY_STANDALONE
+        destination = new  DirectoryInfo(Application.dataPath + "/CSVOutput");
+        #endif
+        
         if(!destination.Exists)
             destination.Create();
 
-        StreamWriter outputFile = File.CreateText(destination + "test" + ".csv");
+
+        StreamWriter outputFile = File.CreateText(destination + "/" + _trialStart.Replace('/','_').Replace(':',';') + ".csv"); // the program doesn't like certain characters so I'm swapping them out for other characters
         
         string finalOutput = "";
         for (int i = 0; i < columnNames.Length; i++)
@@ -243,14 +263,23 @@ public class StudyController : MonoBehaviour
             case STUDY_STATE.KEYPAD_INPUT:
                 StartKeypad();
                 break;
+            case STUDY_STATE.INTERMISSION:
+                _ui.ChangePanel(STUDY_STATE.INTERMISSION);
+                break;
             case STUDY_STATE.FOLLOW_UP:
                 break;
             case STUDY_STATE.DEBRIEF:
                 _ui.ChangePanel(STUDY_STATE.DEBRIEF);
                 break;
+            
             default:
                 break;
         }
+    }
+
+    public void IntermissionContinue()
+    {
+        EnterState(STUDY_STATE.MEMORIZATION);
     }
 
     public void ReturnToMainMenu()
