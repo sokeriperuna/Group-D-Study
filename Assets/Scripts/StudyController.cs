@@ -31,6 +31,11 @@ public struct KeypadTrial
 public class StudyController : MonoBehaviour
 {
     private const string RANDOM_CODES_PATH = "Assets/Resources/randomCodes.csv";
+    private const string CSV_OUTPUT_PATH = "Assets/CSV Output";
+
+    private const char DELIMITER = ',';
+
+    private readonly string[] columnNames = { "ID", "Keypad", "RT", "Accuracy" };
 
     private UIManager _ui;
     private AudioManager _audio;
@@ -42,16 +47,19 @@ public class StudyController : MonoBehaviour
 
     private int _currentTrial;
     private int _maxTrials;
-    
-
-    public KeypadTrial[] keypadTrials;
 
     private string _logged;
     private float _reactionTimeStart;
+    private string _trialStart;
     private int _accurateCharacters;
+
+    private string _rawData;
+
+    public KeypadTrial[] keypadTrials;
 
     private void Awake()
     {
+        
         _state = STUDY_STATE.MAIN_MENU;
         _ui = GetComponent<UIManager>();
         _audio = GetComponent<AudioManager>();
@@ -60,6 +68,8 @@ public class StudyController : MonoBehaviour
     }
     private void InitializeTrial()
     {
+        _trialStart = DateTime.Now.ToString();
+        
         // Read random codes and shuffle them
         string[] unshuffledCodes = File.ReadAllText(RANDOM_CODES_PATH).Split(',');
         _shuffledCodes = unshuffledCodes.OrderBy(a => Guid.NewGuid()).ToList(); // Shuffle codes by generating new Global Unique Identifiers (GUIDs)
@@ -155,11 +165,16 @@ public class StudyController : MonoBehaviour
             Debug.Log(_shuffledCodes[_currentTrial] + " -> " + _logged);
             Debug.Log(_shuffledKeypads[_currentTrial] + " -> RT: " + RT.ToString() + " | Accuracy: " + _accurateCharacters.ToString() + "/" + _logged.Length);
             
+            LogResult(_trialStart,  _shuffledKeypads[_currentTrial], RT, _accurateCharacters);
+
             ++_currentTrial;
             if (_currentTrial < _shuffledKeypads.Count)
                 Invoke("StartMemorization", 0.5f);
             else
+            {
+                SaveData();
                 EnterState(STUDY_STATE.DEBRIEF);
+            }
         }
     }
 
@@ -188,9 +203,28 @@ public class StudyController : MonoBehaviour
         EnterState(nextState);
     }
 
+    // Log a new row of data into the final CSV
+    void LogResult(string id, string keyboard, float RT, int accuracy)
+    {
+        _rawData += id + DELIMITER + keyboard + DELIMITER + RT.ToString() + DELIMITER + accuracy + '\n';
+    }
+    
     private void SaveData()
     {
+        DirectoryInfo destination = new DirectoryInfo(CSV_OUTPUT_PATH);
+        if(!destination.Exists)
+            destination.Create();
+
+        StreamWriter outputFile = File.CreateText(destination + "test" + ".csv");
         
+        string finalOutput = "";
+        for (int i = 0; i < columnNames.Length; i++)
+            finalOutput += columnNames[i] + (i<(columnNames.Length-1)? DELIMITER : '\n');
+
+        finalOutput += _rawData;
+        
+        outputFile.Write(finalOutput);
+        outputFile.Close();
     }
 
     private void EnterState(STUDY_STATE newState)
