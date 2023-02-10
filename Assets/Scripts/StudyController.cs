@@ -17,7 +17,8 @@ public enum STUDY_STATE
     KEYPAD_INPUT,
     INTERMISSION,
     FOLLOW_UP,
-    DEBRIEF
+    DEBRIEF,
+    TEST_TRIAL
 }
 
 [System.Serializable]
@@ -59,9 +60,10 @@ public class StudyController : MonoBehaviour
 
     public KeypadTrial[] keypadTrials;
 
+    private bool testTrialInProgress = false;
+
     private void Awake()
     {
-
         _state = STUDY_STATE.MAIN_MENU;
         _ui = GetComponent<UIManager>();
         _audio = GetComponent<AudioManager>();
@@ -70,7 +72,7 @@ public class StudyController : MonoBehaviour
     }
 
     // bad hacked together emergency measure. deadlines are approaching
-    private readonly string[] unshuffledCodes = { "1593","9235","9753","8459","9274","2185","8040","1401","7485","8356","7281","9750","1264","4306","9138","7915","4963","7203","6254","1893","8427","1689" };
+    private readonly string[] unshuffledCodes = { "1593","9235","9753","8459","9274","2185","8041","1401","7485","8356","7281","9750","1264","4306","9138","7915","4963","7203","6254","1893","8427","1689" };
     private void InitializeTrial()
     {
         _trialStart = DateTime.Now.ToString();
@@ -149,9 +151,14 @@ public class StudyController : MonoBehaviour
     private void StartKeypad()
     {
         _logged = "";
-        Debug.Log("Starting " + _shuffledKeypads[_currentTrial] + " keypad.");
         _state = STUDY_STATE.KEYPAD_INPUT;
-        _ui.ChangePanel(_state, _shuffledKeypads[_currentTrial]);
+        if (!testTrialInProgress)
+        {
+            Debug.Log("Starting " + _shuffledKeypads[_currentTrial] + " keypad.");
+            _ui.ChangePanel(_state, _shuffledKeypads[_currentTrial]);
+        }
+        else
+            _ui.ChangePanel(_state, "test");
         _ui.ClearDigitText();
 
         _reactionTimeStart = Time.time;
@@ -159,6 +166,19 @@ public class StudyController : MonoBehaviour
     
     public void LogInput(int integer)
     {
+        if (testTrialInProgress)
+        {
+            _logged += integer.ToString();
+            _ui.LogDigitProgress(_logged.Length);
+            if (_logged.Length >= 2)
+            {
+                ClearData();
+                testTrialInProgress = false;
+                EnterState(STUDY_STATE.MAIN_MENU);
+            }
+            return;
+        }
+        
         Debug.Log("Current trial -> " + _shuffledCodes[_currentTrial].Length.ToString());
         if (_logged.Length < _shuffledCodes[_currentTrial].Length)
         {
@@ -222,6 +242,13 @@ public class StudyController : MonoBehaviour
     {
         _rawData += id + DELIMITER + keyboard + DELIMITER + RT.ToString() + DELIMITER + accuracy + '\n';
     }
+
+    public void BeginTestTrial()
+    {
+        _state = STUDY_STATE.TEST_TRIAL;
+        testTrialInProgress = true;
+        EnterState(_state);
+    }
     
     private void SaveData()
     {
@@ -247,13 +274,20 @@ public class StudyController : MonoBehaviour
         outputFile.Close();
     }
 
+    private void ClearData()
+    {
+        _rawData = "";
+    }
+
     private void EnterState(STUDY_STATE newState)
     {
         switch (newState)
         {
             case STUDY_STATE.MAIN_MENU:
+                _ui.ChangePanel(STUDY_STATE.MAIN_MENU);
                 break;
             case STUDY_STATE.BRIEF:
+                _ui.ChangePanel(STUDY_STATE.BRIEF);
                 break;
             case STUDY_STATE.MEMORIZATION:
                 StartMemorization();
@@ -271,7 +305,10 @@ public class StudyController : MonoBehaviour
             case STUDY_STATE.DEBRIEF:
                 _ui.ChangePanel(STUDY_STATE.DEBRIEF);
                 break;
-            
+            case STUDY_STATE.TEST_TRIAL:
+                _ui.ChangePanel(STUDY_STATE.MEMORIZATION);
+                StartCoroutine(PlayMemorizationAudio("12"));
+                break;
             default:
                 break;
         }

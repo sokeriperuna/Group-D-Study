@@ -30,6 +30,7 @@ public class UIManager : MonoBehaviour
 
     public RectTransform keypadPanel;
     public TMP_Text digitProgress;
+    public RectTransform testKeypad;
     public KeypadPanel[] keypads;
 
     private Dictionary<String, RectTransform> _keypads;
@@ -74,7 +75,10 @@ public class UIManager : MonoBehaviour
                 break;
             case STUDY_STATE.KEYPAD_INPUT:
                 keypadPanel.gameObject.SetActive(true);
-                _keypads[keypadID].gameObject.SetActive(true);
+                if(keypadID != "test") 
+                    _keypads[keypadID].gameObject.SetActive(true);
+                else
+                    testKeypad.gameObject.SetActive(true);
                 break;
             case STUDY_STATE.INTERMISSION:
                 intermission.gameObject.SetActive(true);
@@ -106,5 +110,7 @@ public class UIManager : MonoBehaviour
         
         foreach (var k in keypads)
             k.panel.gameObject.SetActive(false);
+        testKeypad.gameObject.SetActive(false);
+
     }
 }
