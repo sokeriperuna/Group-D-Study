@@ -58,6 +58,8 @@ public class StudyController : MonoBehaviour
 
     private string _rawData;
 
+    private string _participantAge;
+
     public KeypadTrial[] keypadTrials;
 
     private bool testTrialInProgress = false;
@@ -178,6 +180,13 @@ public class StudyController : MonoBehaviour
             }
             return;
         }
+
+        if (_state == STUDY_STATE.FOLLOW_UP)
+        {
+            _participantAge += integer.ToString();
+            _ui.UpdateFollowUpDigits(_participantAge);
+            return;
+        }
         
         Debug.Log("Current trial -> " + _shuffledCodes[_currentTrial].Length.ToString());
         if (_logged.Length < _shuffledCodes[_currentTrial].Length)
@@ -206,8 +215,8 @@ public class StudyController : MonoBehaviour
                 EnterState(STUDY_STATE.INTERMISSION);
             else
             {
-                SaveData();
-                EnterState(STUDY_STATE.DEBRIEF);
+                _state = STUDY_STATE.FOLLOW_UP;
+                EnterState(STUDY_STATE.FOLLOW_UP);
             }
         }
     }
@@ -266,9 +275,21 @@ public class StudyController : MonoBehaviour
         
         string finalOutput = "";
         for (int i = 0; i < columnNames.Length; i++)
-            finalOutput += columnNames[i] + (i<(columnNames.Length-1)? DELIMITER : '\n');
+            finalOutput += columnNames[i] + DELIMITER;
+        finalOutput += "Age\n";
 
-        finalOutput += _rawData;
+        string modifiedRawData = "";
+        int index = 0;
+        while (index < _rawData.Length)
+        {
+            if (_rawData[index] != '\n')
+                modifiedRawData += _rawData[index];
+            else
+                modifiedRawData += DELIMITER + _participantAge + '\n';
+            index++;
+        }
+
+        finalOutput += modifiedRawData;
         
         outputFile.Write(finalOutput);
         outputFile.Close();
@@ -301,6 +322,7 @@ public class StudyController : MonoBehaviour
                 _ui.ChangePanel(STUDY_STATE.INTERMISSION);
                 break;
             case STUDY_STATE.FOLLOW_UP:
+                _ui.ChangePanel(STUDY_STATE.FOLLOW_UP);
                 break;
             case STUDY_STATE.DEBRIEF:
                 _ui.ChangePanel(STUDY_STATE.DEBRIEF);
@@ -312,6 +334,18 @@ public class StudyController : MonoBehaviour
             default:
                 break;
         }
+    }
+
+    public void ClearParticipantAge()
+    {
+        _participantAge = "";
+        _ui.UpdateFollowUpDigits("");
+    }
+
+    public void ConfirmParticipantAge()
+    {
+        SaveData();
+        EnterState(STUDY_STATE.DEBRIEF);
     }
 
     public void IntermissionContinue()

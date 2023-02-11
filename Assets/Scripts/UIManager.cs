@@ -24,6 +24,8 @@ public class UIManager : MonoBehaviour
     public RectTransform memorization;
     public RectTransform waiting;
     public RectTransform intermission;
+    public RectTransform followUp;
+    public TMP_Text followUpCounter;
     
     [SerializeField]
     public UnityEngine.UI.Slider waitingProgressSlider;
@@ -34,7 +36,7 @@ public class UIManager : MonoBehaviour
     public KeypadPanel[] keypads;
 
     private Dictionary<String, RectTransform> _keypads;
-    private string _activeKeypad; 
+    private string _activeKeypad;
 
     private void Awake()
     { 
@@ -54,7 +56,16 @@ public class UIManager : MonoBehaviour
         digitProgress.text = output;
     }
 
-    public void ClearDigitText() { digitProgress.text = ""; }
+    public void UpdateFollowUpDigits(string digits)
+    {
+        followUpCounter.text = digits;
+    }
+
+    public void ClearDigitText()
+    {
+        digitProgress.text = "";
+        UpdateFollowUpDigits("");
+    }
 
     public void ChangePanel(STUDY_STATE newPanel, string keypadID = "")
     {
@@ -84,6 +95,7 @@ public class UIManager : MonoBehaviour
                 intermission.gameObject.SetActive(true);
                 break;
             case STUDY_STATE.FOLLOW_UP:
+                followUp.gameObject.SetActive(true);
                 break;
             case STUDY_STATE.DEBRIEF:
                 studyDebrief.gameObject.SetActive(true);
@@ -105,6 +117,7 @@ public class UIManager : MonoBehaviour
         memorization.gameObject.SetActive(false);
         waiting.gameObject.SetActive(false);
         intermission.gameObject.SetActive(false);
+        followUp.gameObject.SetActive(false);
         keypadPanel.gameObject.SetActive(false);
         studyDebrief.gameObject.SetActive(false);
         
