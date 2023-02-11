@@ -4133,11 +4133,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   keypadTrials:
   - id: 3x3+1
-    trialCount: 1
+    trialCount: 5
   - id: 5x2
-    trialCount: 1
+    trialCount: 5
   - id: 1x10
-    trialCount: 1
+    trialCount: 5
 --- !u!4 &526463675
 Transform:
   m_ObjectHideFlags: 0
